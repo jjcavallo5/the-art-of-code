@@ -40,20 +40,27 @@ struct Dataset {
     img_reader: io::BufReader<File>,
     lbl_reader: io::BufReader<File>,
     index: u32,
+    len: u32,
 }
 
 impl Dataset {
-    fn next(&mut self) -> ([u8; 28 * 28], u8) {
-        let mut img = [0; 28 * 28];
+    fn next(&mut self) -> ([f32; 28 * 28], u8) {
+        let mut img_u8 = [0; 28 * 28];
         let mut lbl = [0];
 
         self.img_reader
-            .read(&mut img)
+            .read(&mut img_u8)
             .expect("Failed to read image");
         self.lbl_reader
             .read(&mut lbl)
             .expect("Failed to read label");
         self.index += 1;
+
+        // Normalize image to [0, 1]
+        let mut img = [0_f32; 28 * 28];
+        for idx in 0..img_u8.len() {
+            img[idx] = img_u8[idx] as f32 / 255.0;
+        }
 
         return (img, lbl[0]);
     }
@@ -69,9 +76,12 @@ fn get_dataset(is_test: bool) -> Dataset {
     let fp_images = File::open(format!("{split}_images")).unwrap();
     let mut img_reader = io::BufReader::new(fp_images);
 
-    // Skip past header
+    // Get header
     let mut buffer = [0; 16];
     img_reader.read(&mut buffer).unwrap();
+
+    // Get dataset length
+    let length = buffer[7] as u32 + buffer[6] as u32 * 256;
 
     // Open train label file
     let fp_labels = File::open(format!("{split}_labels")).unwrap();
@@ -85,14 +95,14 @@ fn get_dataset(is_test: bool) -> Dataset {
         img_reader,
         lbl_reader,
         index: 0,
+        len: length,
     };
 }
 
-fn print_sample(img: [u8; 28 * 28], lbl: u8) {
+fn print_sample(img: [f32; 28 * 28], lbl: u8) {
     for row in 0..28 {
         for col in 0..28 {
-            let val = img[row * 28 + col];
-            print!("{val} ");
+            print!("{} ", img[row * 28 + col]);
         }
         println!();
     }
@@ -103,8 +113,6 @@ fn main() {
     get_files();
     let mut train_dataset = get_dataset(false);
     let mut test_dataset = get_dataset(true);
-    let (img, label) = train_dataset.next();
-    print_sample(img, label);
-    let (img_2, label_2) = test_dataset.next();
-    print_sample(img_2, label_2);
+    let (img, lbl) = train_dataset.next();
+    print_sample(img, lbl)
 }
