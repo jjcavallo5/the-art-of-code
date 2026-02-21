@@ -1,6 +1,12 @@
 // Operators: https://doc.rust-lang.org/std/ops/index.html
 
-use std::{fs, process::Command};
+use std::mem;
+use std::{
+    fs::{self, File},
+    io,
+    io::prelude::*,
+    process::Command,
+};
 
 fn get_files() {
     let urls = [
@@ -11,7 +17,7 @@ fn get_files() {
     ];
     let files = ["train_images", "train_labels", "test_images", "test_labels"];
 
-    for idx in 0..4 {
+    for idx in 0..urls.len() {
         let url = urls[idx];
         let file = files[idx];
 
@@ -20,19 +26,54 @@ fn get_files() {
             continue;
         }
 
-        let _ = Command::new("curl")
+        Command::new("curl")
             .args([&format!("{url}"), "--output", &format!("{file}.gz")])
             .output()
             .expect("Failed to fetch data");
 
-        let _ = Command::new("gzip")
+        Command::new("gzip")
             .args(["-d", &format!("{file}.gz")])
             .output()
             .expect("Failed to decompress data");
     }
 }
 
+fn read_train_images() -> io::Result<()> {
+    let f = File::open("train_images").unwrap();
+    let mut reader = io::BufReader::new(f);
+    let mut buffer = [0; 16];
+    reader.read(&mut buffer).unwrap(); // Header, don't care
+
+    let mut first_image = [0; 28 * 28];
+    reader.read(&mut first_image).unwrap();
+
+    for row in 0..28 {
+        for col in 0..28 {
+            let val = first_image[row * 28 + col];
+            print!("{val} ");
+        }
+        println!();
+    }
+
+    Ok(())
+}
+
+fn read_train_labels() {
+    let f = File::open("train_labels").unwrap();
+    let mut reader = io::BufReader::new(f);
+    let mut buffer = [0; 8];
+    reader.read(&mut buffer).unwrap(); // Header, don't care
+
+    let mut first_label = [0; 1];
+    reader.read(&mut first_label).unwrap();
+
+    let lbl = first_label[0];
+    println!("Label: {lbl}")
+}
+
 fn main() {
     println!("Hello world!");
     get_files();
+    read_train_images();
+    read_train_labels();
 }
