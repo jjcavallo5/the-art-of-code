@@ -1,6 +1,9 @@
 // Operators: https://doc.rust-lang.org/std/ops/index.html
 
+mod micrograd;
+
 use std::collections::hash_map::RandomState;
+use std::collections::HashMap;
 use std::hash::{BuildHasher, Hash, Hasher};
 use std::ops::{Add, Div, Mul, Neg, Sub};
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -108,82 +111,6 @@ fn get_dataset(is_test: bool) -> Dataset {
     };
 }
 
-#[derive(Debug, Clone)]
-struct Value {
-    id: u64,
-    value: f32,
-    grad: f32,
-    children: Vec<Value>,
-    local_grads: Vec<f32>,
-}
-
-impl Add for Value {
-    type Output = Self;
-    fn add(self, other: Self) -> Self {
-        return Self {
-            id: random(),
-            value: self.value + other.value,
-            grad: 0.0,
-            children: vec![self, other],
-            local_grads: vec![1.0, 1.0],
-        };
-    }
-}
-
-impl Mul for Value {
-    type Output = Self;
-    fn mul(self, other: Self) -> Self {
-        return Self {
-            id: random(),
-            value: self.value * other.value,
-            grad: 0.0,
-            local_grads: vec![other.value, self.value],
-            children: vec![self, other],
-        };
-    }
-}
-
-impl Value {
-    fn new(value: f32) -> Self {
-        return Self {
-            id: random(),
-            value,
-            grad: 0.0,
-            local_grads: Vec::new(),
-            children: Vec::new(),
-        };
-    }
-
-    fn backward(mut self) {
-        let mut topo: Vec<Value> = Vec::new();
-        let mut visited_ids: Vec<u64> = Vec::new();
-        self.grad = 1.0;
-        build_topo(&mut topo, &mut visited_ids, self.clone());
-        topo.reverse();
-
-        for top in topo.clone() {
-            println!("{}:{}", top.value, top.grad);
-        }
-
-        for mut v in topo {
-            for idx in 0..v.children.len() {
-                println!("grads: {}, {}", v.local_grads[idx], v.grad);
-                v.children[idx].grad += v.local_grads[idx] * v.grad;
-            }
-        }
-    }
-}
-
-fn build_topo(topo: &mut Vec<Value>, visited_ids: &mut Vec<u64>, v: Value) {
-    if !visited_ids.contains(&v.id) {
-        visited_ids.push(v.id);
-        for child in &v.children {
-            build_topo(topo, visited_ids, child.clone());
-        }
-        topo.push(v);
-    }
-}
-
 fn print_sample(img: [f32; 28 * 28], lbl: u8) {
     for row in 0..28 {
         for col in 0..28 {
@@ -201,10 +128,15 @@ fn main() {
     let (img, lbl) = train_dataset.next();
     print_sample(img, lbl);
 
-    let a = Value::new(2.0);
-    let b = Value::new(3.0);
-    let c = a.clone() * b.clone();
-    let L = c.clone() + a.clone();
+    let a = micrograd::Value::new(2.0);
+    let b = micrograd::Value::new(3.0);
+    let c = &a * &b;
+    let L = &c + &a;
     L.backward();
-    println!("grad: {}, val: {}", a.grad, c.grad);
+    println!(
+        "a grad: {}, b grad: {}, c grad {}",
+        a.grad(),
+        b.grad(),
+        c.grad()
+    );
 }
