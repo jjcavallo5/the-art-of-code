@@ -57,7 +57,7 @@ struct Dataset {
 }
 
 impl Dataset {
-    fn next(&mut self) -> ([f32; 28 * 28], u8) {
+    fn next(&mut self) -> (Vec<micrograd::Value>, u8) {
         let mut img_u8 = [0; 28 * 28];
         let mut lbl = [0];
 
@@ -70,9 +70,10 @@ impl Dataset {
         self.index += 1;
 
         // Normalize image to [0, 1]
-        let mut img = [0_f32; 28 * 28];
+        let mut img = Vec::new();
         for idx in 0..img_u8.len() {
-            img[idx] = img_u8[idx] as f32 / 255.0;
+            let val = micrograd::Value::new(img_u8[idx] as f64 / 255.0);
+            img.push(val);
         }
 
         return (img, lbl[0]);
@@ -123,10 +124,10 @@ fn print_sample(img: [f32; 28 * 28], lbl: u8) {
 }
 
 fn main() {
-    // get_files();
-    // let mut train_dataset = get_dataset(false);
-    // let mut test_dataset = get_dataset(true);
-    // let (img, lbl) = train_dataset.next();
+    get_files();
+    let mut train_dataset = get_dataset(false);
+    let mut test_dataset = get_dataset(true);
+    let (img, lbl) = train_dataset.next();
     // print_sample(img, lbl);
 
     // let a = micrograd::Value::new(2.0);
@@ -135,11 +136,9 @@ fn main() {
     // let L = &c + &a;
     // L.backward();
     //
-    let layer = network::LinearLayer::new(2, 3);
-    let input = vec![micrograd::Value::new(0.0), micrograd::Value::new(1.0)];
-    let output = layer.forward(input);
-    let output_vals = output.iter().map(|x| x.value());
-    for val in output_vals {
-        println!("{:?}", val)
+    let layer = network::LinearLayer::new(28 * 28, 10);
+    let output = layer.forward(img);
+    for val in output {
+        println!("{:?}", val.value())
     }
 }
