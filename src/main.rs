@@ -151,7 +151,6 @@ fn main() {
     get_files();
     let mut train_dataset = get_dataset(false);
     let mut test_dataset = get_dataset(true);
-    let (img, lbl) = train_dataset.next();
     // print_sample(img, lbl);
 
     // let a = micrograd::Value::new(2.0);
@@ -159,9 +158,21 @@ fn main() {
     // let c = &a * &b;
     // let L = &c + &a;
     // L.backward();
-    //
     let layer = network::LinearLayer::new(28 * 28, 10);
-    let output = layer.forward(img);
-    let loss = cross_entropy(output, lbl);
-    loss.backward();
+
+    for idx in 0..train_dataset.len {
+        if idx % 100 == 0 {
+            println!("{} / {}", idx, train_dataset.len);
+        }
+        let (img, lbl) = train_dataset.next();
+        let output = layer.forward(img);
+        let loss = cross_entropy(output, lbl);
+        loss.backward();
+    }
+
+    let (img, _) = test_dataset.next();
+    let outputs = layer.forward(img);
+    for out in outputs {
+        println!("{:?}", out.value())
+    }
 }

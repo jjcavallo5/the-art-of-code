@@ -107,6 +107,28 @@ impl Value {
             .push(pow * self_val.powf(pow - 1.));
         return out;
     }
+    pub fn relu(&self) -> Value {
+        let self_val = self.node.borrow().value;
+        if self_val < 0.0 {
+            let out = Value::new(0.0);
+            out.node.borrow_mut().children.push(self.node.clone());
+            out.node.borrow_mut().local_grads.push(0.0);
+            return out;
+        } else {
+            let out = Value::new(self_val);
+            out.node.borrow_mut().children.push(self.node.clone());
+            out.node.borrow_mut().local_grads.push(1.0);
+            return out;
+        }
+    }
+    pub fn exp(&self) -> Value {
+        let self_val = self.node.borrow().value;
+        let out_val = 2.718281828459_f64.powf(self_val);
+        let out = Value::new(out_val);
+        out.node.borrow_mut().children.push(self.node.clone());
+        out.node.borrow_mut().local_grads.push(out_val);
+        return out;
+    }
 }
 
 fn build_topo(root: ValueRef) -> Vec<ValueRef> {
