@@ -40,4 +40,7 @@ impl LinearLayer {
 
         return output_vec;
     }
+    pub fn parameters(&self) -> &Vec<micrograd::Value> {
+        return &self.weights;
+    }
 }

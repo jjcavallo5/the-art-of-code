@@ -135,6 +135,13 @@ fn print_sample(img: [f32; 28 * 28], lbl: u8) {
     println!("Label: {lbl}");
 }
 
+fn print_tensor(tensor: &Tensor) {
+    for val in tensor {
+        print!("{:.6} ", val.value());
+    }
+    println!()
+}
+
 fn cross_entropy(outs: Tensor, label: Tensor) -> micrograd::Value {
     let mut sum = micrograd::Value::new(0.0);
     for idx in 0..outs.len() {
@@ -145,6 +152,22 @@ fn cross_entropy(outs: Tensor, label: Tensor) -> micrograd::Value {
 
     let num_classes = micrograd::Value::new(label.len() as f64);
     return &sum / &num_classes;
+}
+
+fn softmax(logits: Tensor) -> Tensor {
+    let mut total = micrograd::Value::new(0.0);
+    for idx in 0..logits.len() {
+        total = &total + &logits[idx].exp(); //2.718281828459_f64.powf(logits[idx].value());
+    }
+
+    let mut out = Vec::new();
+    for logit in logits {
+        let exp_logit = logit.exp();
+        let sftmx_logit = &exp_logit / &total;
+        out.push(sftmx_logit);
+    }
+
+    return out;
 }
 
 fn main() {
@@ -160,14 +183,25 @@ fn main() {
     // L.backward();
     let layer = network::LinearLayer::new(28 * 28, 10);
 
-    for idx in 0..train_dataset.len {
+    const LR: f64 = 0.01;
+    let mut acc_loss = 0.0;
+    for idx in 0..10_000 {
         if idx % 100 == 0 {
-            println!("{} / {}", idx, train_dataset.len);
+            println!("[ {} / {} ]:\tLoss: {}", idx, train_dataset.len, acc_loss);
+            acc_loss = 0.0;
         }
         let (img, lbl) = train_dataset.next();
-        let output = layer.forward(img);
-        let loss = cross_entropy(output, lbl);
+        let l1 = layer.forward(img);
+        let l2 = l1.iter().map(|v| v.relu()).collect();
+        let probs = softmax(l2);
+        print_tensor(&probs);
+        let loss = cross_entropy(probs, lbl);
+        acc_loss += loss.value();
         loss.backward();
+
+        for p in layer.parameters() {
+            p.step(LR);
+        }
     }
 
     let (img, _) = test_dataset.next();

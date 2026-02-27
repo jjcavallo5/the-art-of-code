@@ -129,6 +129,11 @@ impl Value {
         out.node.borrow_mut().local_grads.push(out_val);
         return out;
     }
+    pub fn step(&self, learning_rate: f64) {
+        let mut node = self.node.borrow_mut();
+        node.value -= node.grad * learning_rate;
+        node.grad = 0.0;
+    }
 }
 
 fn build_topo(root: ValueRef) -> Vec<ValueRef> {
