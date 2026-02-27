@@ -8,6 +8,7 @@ use std::rc::Rc;
 type ValueRef = Rc<RefCell<Node>>;
 
 // Node struct for storing data
+#[derive(Debug)]
 struct Node {
     value: f64,
     grad: f64,
@@ -15,7 +16,7 @@ struct Node {
     children: Vec<ValueRef>,
 }
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct Value {
     node: ValueRef,
 }
@@ -72,6 +73,9 @@ impl Value {
 
     pub fn grad(&self) -> f64 {
         return self.node.borrow().grad;
+    }
+    pub fn value(&self) -> f64 {
+        return self.node.borrow().value;
     }
 }
 

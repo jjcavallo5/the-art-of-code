@@ -123,21 +123,23 @@ fn print_sample(img: [f32; 28 * 28], lbl: u8) {
 }
 
 fn main() {
-    get_files();
-    let mut train_dataset = get_dataset(false);
-    let mut test_dataset = get_dataset(true);
-    let (img, lbl) = train_dataset.next();
-    print_sample(img, lbl);
+    // get_files();
+    // let mut train_dataset = get_dataset(false);
+    // let mut test_dataset = get_dataset(true);
+    // let (img, lbl) = train_dataset.next();
+    // print_sample(img, lbl);
 
-    let a = micrograd::Value::new(2.0);
-    let b = micrograd::Value::new(3.0);
-    let c = &a * &b;
-    let L = &c + &a;
-    L.backward();
-    println!(
-        "a grad: {}, b grad: {}, c grad {}",
-        a.grad(),
-        b.grad(),
-        c.grad()
-    );
+    // let a = micrograd::Value::new(2.0);
+    // let b = micrograd::Value::new(3.0);
+    // let c = &a * &b;
+    // let L = &c + &a;
+    // L.backward();
+    //
+    let layer = network::LinearLayer::new(2, 3);
+    let input = vec![micrograd::Value::new(0.0), micrograd::Value::new(1.0)];
+    let output = layer.forward(input);
+    let output_vals = output.iter().map(|x| x.value());
+    for val in output_vals {
+        println!("{:?}", val)
+    }
 }
