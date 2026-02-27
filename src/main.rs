@@ -15,6 +15,8 @@ use std::{
     process::Command,
 };
 
+type Tensor = Vec<micrograd::Value>;
+
 fn random() -> u64 {
     let hasher = RandomState::new().build_hasher();
     return hasher.finish();
@@ -57,7 +59,7 @@ struct Dataset {
 }
 
 impl Dataset {
-    fn next(&mut self) -> (Vec<micrograd::Value>, u8) {
+    fn next(&mut self) -> (Vec<micrograd::Value>, Vec<micrograd::Value>) {
         let mut img_u8 = [0; 28 * 28];
         let mut lbl = [0];
 
@@ -76,7 +78,17 @@ impl Dataset {
             img.push(val);
         }
 
-        return (img, lbl[0]);
+        let mut label = Vec::new();
+        // One-hot encode label
+        for idx in 0..10 {
+            if lbl[0] == idx {
+                label.push(micrograd::Value::new(1.0));
+            } else {
+                label.push(micrograd::Value::new(0.0));
+            }
+        }
+
+        return (img, label);
     }
 }
 
@@ -123,6 +135,18 @@ fn print_sample(img: [f32; 28 * 28], lbl: u8) {
     println!("Label: {lbl}");
 }
 
+fn cross_entropy(outs: Tensor, label: Tensor) -> micrograd::Value {
+    let mut sum = micrograd::Value::new(0.0);
+    for idx in 0..outs.len() {
+        let loss_idx = &outs[idx] - &label[idx];
+        let sqr_error = &loss_idx * &loss_idx;
+        sum = &sum + &sqr_error;
+    }
+
+    let num_classes = micrograd::Value::new(label.len() as f64);
+    return &sum / &num_classes;
+}
+
 fn main() {
     get_files();
     let mut train_dataset = get_dataset(false);
@@ -138,7 +162,6 @@ fn main() {
     //
     let layer = network::LinearLayer::new(28 * 28, 10);
     let output = layer.forward(img);
-    for val in output {
-        println!("{:?}", val.value())
-    }
+    let loss = cross_entropy(output, lbl);
+    loss.backward();
 }

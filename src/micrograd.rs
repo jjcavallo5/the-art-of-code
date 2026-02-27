@@ -33,6 +33,18 @@ impl ops::Add<&Value> for &Value {
     }
 }
 
+impl ops::Sub<&Value> for &Value {
+    type Output = Value;
+    fn sub(self, other: &Value) -> Value {
+        let out = Value::new(self.node.borrow().value - other.node.borrow().value);
+        out.node.borrow_mut().children.push(self.node.clone());
+        out.node.borrow_mut().children.push(other.node.clone());
+        out.node.borrow_mut().local_grads.push(1.0);
+        out.node.borrow_mut().local_grads.push(1.0);
+        return out;
+    }
+}
+
 impl ops::Mul<&Value> for &Value {
     type Output = Value;
     fn mul(self, other: &Value) -> Value {
@@ -44,6 +56,14 @@ impl ops::Mul<&Value> for &Value {
         out.node.borrow_mut().local_grads.push(other_val);
         out.node.borrow_mut().local_grads.push(self_val);
         return out;
+    }
+}
+
+impl ops::Div<&Value> for &Value {
+    type Output = Value;
+    fn div(self, other: &Value) -> Value {
+        let other_inv = other.pow(-1.0);
+        return self * &other_inv;
     }
 }
 
@@ -76,6 +96,16 @@ impl Value {
     }
     pub fn value(&self) -> f64 {
         return self.node.borrow().value;
+    }
+    pub fn pow(&self, pow: f64) -> Value {
+        let out = Value::new(self.node.borrow().value.powf(pow));
+        let self_val = self.node.borrow().value;
+        out.node.borrow_mut().children.push(self.node.clone());
+        out.node
+            .borrow_mut()
+            .local_grads
+            .push(pow * self_val.powf(pow - 1.));
+        return out;
     }
 }
 
