@@ -1,6 +1,7 @@
 // Operators: https://doc.rust-lang.org/std/ops/index.html
 
 mod micrograd;
+mod network;
 
 use std::collections::hash_map::RandomState;
 use std::collections::HashMap;
