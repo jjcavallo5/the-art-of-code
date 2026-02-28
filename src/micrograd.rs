@@ -122,8 +122,7 @@ impl Value {
         }
     }
     pub fn exp(&self) -> Value {
-        let self_val = self.node.borrow().value;
-        let out_val = 2.718281828459_f64.powf(self_val);
+        let out_val = self.node.borrow().value.exp();
         let out = Value::new(out_val);
         out.node.borrow_mut().children.push(self.node.clone());
         out.node.borrow_mut().local_grads.push(out_val);
@@ -153,4 +152,19 @@ fn build_topo(root: ValueRef) -> Vec<ValueRef> {
 
     dfs(root, &mut topo, &mut visited);
     return topo;
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn add_backprop() {
+        let a = Value::new(2.0);
+        let b = Value::new(3.0);
+        let result = &a + &b;
+        result.backward(); // a.grad == b.grad == 1
+
+        assert_eq!(a.grad(), 1.0)
+    }
 }
