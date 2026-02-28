@@ -1,3 +1,6 @@
+use std;
+use std::hash::*;
+
 use crate::micrograd;
 
 pub struct LinearLayer {
@@ -8,17 +11,10 @@ pub struct LinearLayer {
 
 impl LinearLayer {
     pub fn new(input_dim: usize, output_dim: usize) -> Self {
-        let mut weights = Vec::new();
-        for _row in 0..input_dim {
-            for _col in 0..output_dim {
-                weights.push(micrograd::Value::new(1.0))
-            }
-        }
-
         return Self {
             input_dim,
             output_dim,
-            weights,
+            weights: init_weights(input_dim, output_dim),
         };
     }
 
@@ -43,4 +39,26 @@ impl LinearLayer {
     pub fn parameters(&self) -> &Vec<micrograd::Value> {
         return &self.weights;
     }
+}
+
+fn random() -> u64 {
+    let hasher = std::hash::RandomState::new().build_hasher();
+    return hasher.finish();
+}
+
+fn init_weights(input_s: usize, output_s: usize) -> Vec<micrograd::Value> {
+    let mut rand_vec = Vec::new();
+    for _ in 0..input_s * output_s {
+        let value = random();
+        rand_vec.push(value);
+    }
+
+    let max = *rand_vec.iter().max().expect("BOOM!") as f64;
+
+    return rand_vec
+        .iter()
+        .map(|v| (*v as f64) / max)
+        .map(|v| v - 0.5)
+        .map(|v| micrograd::Value::new(v))
+        .collect();
 }
