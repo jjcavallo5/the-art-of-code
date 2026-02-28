@@ -62,8 +62,17 @@ impl ops::Mul<&Value> for &Value {
 impl ops::Div<&Value> for &Value {
     type Output = Value;
     fn div(self, other: &Value) -> Value {
-        let other_inv = other.pow(-1.0);
-        return self * &other_inv;
+        let out = Value::new(self.node.borrow().value / other.node.borrow().value);
+        let other_val = other.node.borrow().value;
+        let self_val = self.node.borrow().value;
+        out.node.borrow_mut().children.push(self.node.clone());
+        out.node.borrow_mut().children.push(other.node.clone());
+
+        let d_self = 1.0 / other_val;
+        let d_other = -self_val / other_val.powf(2.0);
+        out.node.borrow_mut().local_grads.push(d_self);
+        out.node.borrow_mut().local_grads.push(d_other);
+        return out;
     }
 }
 
@@ -164,7 +173,75 @@ mod tests {
         let b = Value::new(3.0);
         let result = &a + &b;
         result.backward(); // a.grad == b.grad == 1
+        assert_eq!(a.grad(), 1.0);
+        assert_eq!(b.grad(), 1.0);
+    }
 
-        assert_eq!(a.grad(), 1.0)
+    #[test]
+    fn mul_backprop() {
+        let a = Value::new(2.0);
+        let b = Value::new(3.0);
+        let result = &a * &b;
+        result.backward(); // a.grad == b, b.grad == a
+        assert_eq!(a.grad(), 3.0);
+        assert_eq!(b.grad(), 2.0);
+    }
+
+    #[test]
+    fn pow_backprop() {
+        let a = Value::new(4.0);
+        a.pow(2.0).backward();
+        assert_eq!(a.grad(), 8.0);
+
+        let b = Value::new(4.0);
+        b.pow(-1.0).backward();
+        assert_eq!(b.grad(), -0.0625);
+    }
+
+    #[test]
+    fn div_backprop() {
+        let a = Value::new(4.0);
+        let b = Value::new(2.0);
+        let result = &a / &b;
+        result.backward();
+        // f'g + g'x / g**2 => a.grad = (1*2 + 1*4) / 4 = 1.5
+        // f'g + g'x / g**2 => b.grad = (1*4 + 1*2) / 16 = 0.375
+        assert_eq!(a.grad(), 0.5);
+        assert_eq!(b.grad(), -1.0);
+    }
+
+    #[test]
+    fn exp_backprop() {
+        let a = Value::new(2.0);
+        a.exp().backward(); // a.grad == a.exp()
+        assert_eq!(a.grad(), 2.0_f64.exp());
+    }
+
+    #[test]
+    fn relu_backprop() {
+        let a = Value::new(2.0);
+        let b = Value::new(-2.0);
+        a.relu().backward(); // a.grad = 1.0
+        b.relu().backward(); // b.grad = 0.0
+        assert_eq!(a.grad(), 1.0);
+        assert_eq!(b.grad(), 0.0);
+    }
+
+    #[test]
+    fn test_step() {
+        let a = Value::new(3.0);
+        let b = Value::new(2.0);
+        let c = &a * &b; // a.grad = 2, b.grad = 3
+        c.backward();
+        assert_eq!(a.grad(), 2.0);
+        assert_eq!(b.grad(), 3.0);
+
+        a.step(0.1); // update by 2.0*0.1=0.2 => 2.8 new val
+        b.step(0.1); // update by 3.0*0.1=0.3 => 1.7 new val
+
+        assert_eq!(a.value(), 2.8);
+        assert_eq!(b.value(), 1.7);
+        assert_eq!(a.grad(), 0.0); // Gradients zeroed
+        assert_eq!(b.grad(), 0.0); // Gradients zeroed
     }
 }
