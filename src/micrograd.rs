@@ -40,7 +40,7 @@ impl ops::Sub<&Value> for &Value {
         out.node.borrow_mut().children.push(self.node.clone());
         out.node.borrow_mut().children.push(other.node.clone());
         out.node.borrow_mut().local_grads.push(1.0);
-        out.node.borrow_mut().local_grads.push(1.0);
+        out.node.borrow_mut().local_grads.push(-1.0);
         return out;
     }
 }
@@ -95,7 +95,7 @@ impl Value {
 
         for v in topo.iter().rev() {
             for (idx, child) in v.borrow().children.iter().enumerate() {
-                child.borrow_mut().grad += v.borrow().local_grads[idx];
+                child.borrow_mut().grad += v.borrow().grad * v.borrow().local_grads[idx];
             }
         }
     }

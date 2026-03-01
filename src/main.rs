@@ -1,5 +1,3 @@
-// Operators: https://doc.rust-lang.org/std/ops/index.html
-
 mod data;
 mod micrograd;
 mod network;
@@ -13,7 +11,7 @@ fn print_tensor(tensor: &Tensor) {
     println!()
 }
 
-fn cross_entropy(outs: &Tensor, label: &Tensor) -> micrograd::Value {
+fn mse_loss(outs: &Tensor, label: &Tensor) -> micrograd::Value {
     let mut sum = micrograd::Value::new(0.0);
     for idx in 0..outs.len() {
         let loss_idx = &outs[idx] - &label[idx];
@@ -76,7 +74,7 @@ fn main() {
         let l2: Tensor = l1.iter().map(|v| v.relu()).collect();
         let logits = layer2.forward(l2);
         let probs = softmax(&logits);
-        let loss = cross_entropy(&probs, &lbl);
+        let loss = mse_loss(&probs, &lbl);
         acc_loss += loss.value();
         loss.backward();
 
