@@ -60,48 +60,58 @@ fn main() {
     let mut acc_loss = 0.0;
     let mut num_correct = 0;
     println!("Starting training...");
-    for idx in 0..10_000 {
-        if idx % LOG_EVERY == 0 {
-            print!("[ {} / {} ]:  ", idx, train_dataset.len());
-            print!("Loss: {}  ", acc_loss);
-            print!("Acc: {} / {}", num_correct, LOG_EVERY);
-            println!();
-            acc_loss = 0.0;
-            num_correct = 0;
-        }
-        let (img, lbl) = train_dataset.next();
-        let l1 = layer1.forward(img);
-        let l2: Tensor = l1.iter().map(|v| v.relu()).collect();
-        let logits = layer2.forward(l2);
-        let probs = softmax(&logits);
-        let loss = mse_loss(&probs, &lbl);
-        acc_loss += loss.value();
-        loss.backward();
+    for epoch in 0..1000 {
+        for idx in 0..16 {
+            if idx % LOG_EVERY == 0 {
+                print!("[ Epoch {} ]:  ", epoch);
+                print!("[ {} / {} ]:  ", idx, train_dataset.len());
+                print!("Loss: {}  ", acc_loss);
+                print!("Acc: {} / {}", num_correct, LOG_EVERY);
+                println!();
+                acc_loss = 0.0;
+                num_correct = 0;
+            }
+            let (img, lbl) = train_dataset.next();
+            let l1 = layer1.forward(img);
+            let l2: Tensor = l1.iter().map(|v| v.relu()).collect();
+            let logits = layer2.forward(l2);
+            let probs = softmax(&logits);
+            print_tensor(&probs);
+            let loss = mse_loss(&probs, &lbl);
+            acc_loss += loss.value();
+            loss.backward();
 
-        // Gradient accumulation for batch size replacement
-        if idx % BATCH_SIZE == 0 {
-            for p in layer1.parameters() {
+            // Gradient accumulation for batch size replacement
+            // if idx % BATCH_SIZE == 0 {
+            for p in layer1.parameters().0 {
                 p.step(LR);
             }
-            for p in layer2.parameters() {
+            for p in layer1.parameters().1 {
                 p.step(LR);
             }
-        }
+            for p in layer2.parameters().0 {
+                p.step(LR);
+            }
+            for p in layer2.parameters().1 {
+                p.step(LR);
+            }
+            // }
 
-        let max_prob_idx = probs
-            .iter()
-            .enumerate()
-            .max_by(|a, b| a.1.value().total_cmp(&b.1.value()))
-            .expect("Max value not found")
-            .0;
-        let max_lbl_idx = lbl
-            .iter()
-            .enumerate()
-            .max_by(|a, b| a.1.value().total_cmp(&b.1.value()))
-            .expect("Max value not found")
-            .0;
-        if max_prob_idx == max_lbl_idx {
-            num_correct += 1;
+            let max_prob_idx = probs
+                .iter()
+                .enumerate()
+                .max_by(|a, b| a.1.value().total_cmp(&b.1.value()))
+                .expect("Max value not found")
+                .0;
+            let max_lbl_idx = lbl
+                .iter()
+                .enumerate()
+                .max_by(|a, b| a.1.value().total_cmp(&b.1.value()))
+                .expect("Max value not found")
+                .0;
+            if max_prob_idx == max_lbl_idx {
+                num_correct += 1;
+            }
         }
     }
 
