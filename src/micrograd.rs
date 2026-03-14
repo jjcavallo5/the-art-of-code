@@ -130,6 +130,13 @@ impl Value {
             return out;
         }
     }
+    pub fn log(&self) -> Value {
+        let self_val = self.node.borrow().value;
+        let out = Value::new(self_val.ln());
+        out.node.borrow_mut().children.push(self.node.clone());
+        out.node.borrow_mut().local_grads.push(1.0 / self_val);
+        return out;
+    }
     pub fn exp(&self) -> Value {
         let out_val = self.node.borrow().value.exp();
         let out = Value::new(out_val);

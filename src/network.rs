@@ -67,7 +67,7 @@ fn init_weights(input_s: usize, output_s: usize) -> Vec<micrograd::Value> {
         .iter()
         .map(|v| (*v as f64) / max)
         .map(|v| v - 0.5)
-        // .map(|v| v / 20.0)
+        .map(|v| v * (1.0 / input_s as f64).sqrt())
         .map(|v| micrograd::Value::new(v))
         .collect();
 }

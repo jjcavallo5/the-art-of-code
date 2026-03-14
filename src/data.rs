@@ -38,7 +38,7 @@ pub struct Dataset {
     img_reader: io::BufReader<fs::File>,
     lbl_reader: io::BufReader<fs::File>,
     index: u32,
-    len: u32,
+    len: usize,
 }
 
 impl Dataset {
@@ -47,10 +47,10 @@ impl Dataset {
         let mut lbl = [0];
 
         self.img_reader
-            .read(&mut img_u8)
+            .read_exact(&mut img_u8)
             .expect("Failed to read image");
         self.lbl_reader
-            .read(&mut lbl)
+            .read_exact(&mut lbl)
             .expect("Failed to read label");
         self.index += 1;
 
@@ -74,7 +74,7 @@ impl Dataset {
         return (img, label);
     }
 
-    pub fn len(&self) -> u32 {
+    pub fn len(&self) -> usize {
         return self.len;
     }
 }
@@ -91,10 +91,10 @@ pub fn get_dataset(is_test: bool) -> Dataset {
 
     // Get header
     let mut buffer = [0; 16];
-    img_reader.read(&mut buffer).unwrap();
+    img_reader.read_exact(&mut buffer).unwrap();
 
     // Get dataset length
-    let length = buffer[7] as u32 + buffer[6] as u32 * 256;
+    let length = buffer[7] as usize + buffer[6] as usize * 256;
 
     // Open train label file
     let fp_labels = fs::File::open(format!("{split}_labels")).unwrap();
@@ -102,7 +102,7 @@ pub fn get_dataset(is_test: bool) -> Dataset {
 
     // Skip past header
     let mut buffer = [0; 8];
-    lbl_reader.read(&mut buffer).unwrap(); // Header, don't care
+    lbl_reader.read_exact(&mut buffer).unwrap(); // Header, don't care
 
     return Dataset {
         img_reader,
